@@ -24,4 +24,11 @@ jobs:
         shell: powershell
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "${{ github.ref_name }}" dist/* --title "콩으니 카드뉴스 생성 에디터 ${{ github.ref_name }}" --notes-file RELEASE_NOTES.md
+        run: |
+          gh release view "${{ github.ref_name }}" *> $null
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload "${{ github.ref_name }}" dist/* --clobber
+          } else {
+            gh release create "${{ github.ref_name }}" dist/* --title "콩으니 카드뉴스 생성 에디터 ${{ github.ref_name }}" --notes-file RELEASE_NOTES.md
+          }
+          if ($LASTEXITCODE -ne 0) { throw 'Release upload failed.' }
