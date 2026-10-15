@@ -1,4 +1,4 @@
-param([switch]$SkipTests)
+﻿param([switch]$SkipTests)
 $ErrorActionPreference = 'Stop'
 $project = $PSScriptRoot
 $version = '1.0.0'
