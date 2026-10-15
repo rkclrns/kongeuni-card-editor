@@ -3,6 +3,11 @@ on:
   push:
     tags: ['v*']
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Optional existing release tag to upload (example: v1.0.0)'
+        required: false
+        default: ''
 permissions:
   contents: read
 jobs:
@@ -13,22 +18,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build and test
-        shell: powershell
+        shell: pwsh
         run: .\build.ps1
       - uses: actions/upload-artifact@v4
         with:
           name: KongeuniCardEditor-Windows
           path: dist/*
       - name: Publish tagged release
-        if: startsWith(github.ref, 'refs/tags/')
-        shell: powershell
+        if: startsWith(github.ref, 'refs/tags/') || inputs.release_tag != ''
+        shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.release_tag || github.ref_name }}
         run: |
-          gh release view "${{ github.ref_name }}" *> $null
+          $tag = $env:RELEASE_TAG
+          if ($tag -notmatch '^v\d+\.\d+\.\d+([-.][A-Za-z0-9.-]+)?$') { throw 'Invalid release tag.' }
+          $files = @(Get-ChildItem dist -File | ForEach-Object FullName)
+          gh release view "$tag" *> $null
           if ($LASTEXITCODE -eq 0) {
-            gh release upload "${{ github.ref_name }}" dist/* --clobber
+            gh release upload "$tag" @files --clobber
           } else {
-            gh release create "${{ github.ref_name }}" dist/* --title "콩으니 카드뉴스 생성 에디터 ${{ github.ref_name }}" --notes-file RELEASE_NOTES.md
+            gh release create "$tag" @files --title "Kongeuni Card Editor $tag" --notes-file RELEASE_NOTES.md
           }
           if ($LASTEXITCODE -ne 0) { throw 'Release upload failed.' }
